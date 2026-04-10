@@ -135,12 +135,12 @@ sellExec = shortSignal_prev and not wasShort
 // ======================================================
 
 if buyExec
- strategy.entry("Long", strategy.long, comment="BUY")
- alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
+    strategy.entry("Long", strategy.long, comment="BUY")
+    alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
 
 if sellExec
- strategy.entry("Short", strategy.short, comment="SELL")
- alert('{"action":"sell","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
+    strategy.entry("Short", strategy.short, comment="SELL")
+    alert('{"action":"sell","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
 
 // ======================================================
 // VISUALS
