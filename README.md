@@ -30,13 +30,14 @@
 
 ## 🔧 Компоненти
 
-### 1. **TradingView Pine Script** (`BTCUSDT_V7_4_webhook.pine`)
+### 1. **TradingView Pine Script** (`BTCUSDT_V7_5_webhook.pine`)
 - Стратегија за BTCUSDT на 5m timeframe
 - Генерира BUY/SELL сигнали базирани на техничка анализа
 - Испраќа webhook alerts во реално време
+- Користи `open` цена за следната свеќа (next bar execution)
 
 ```pinescript
-alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostring(close) + '}', alert.freq_once_per_bar)
+alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
 ```
 
 ### 2. **Webhook Handler** (`webhook_handler.py`)
@@ -89,7 +90,8 @@ trading_bot/
 ├── test_webhook_integration.py # Тестови
 │
 ├── Pine Script стратегии:
-├── BTCUSDT_V7_4_webhook.pine   # Главна стратегија
+├── BTCUSDT_V7_5_webhook.pine   # Главна стратегија (V7.5)
+├── BTCUSDT_V7_4_webhook.pine   # Стара верзија (V7.4)
 ├── BTCUSDT_V7_4_Final.pine     # Финална верзија
 ├── BTCUSDT_Clean.pine          # Чиста верзија
 ├── BTCUSDT_5m_V7_2_Complete.pine
@@ -218,6 +220,7 @@ python3 test_webhook_integration.py
 | 2026-04-10 | Systemd services за auto-restart |
 | 2026-04-10 | GitHub push со SSH клуч |
 | 2026-04-10 | Синхронизација со TradingView позиција |
+| 2026-04-10 | Ажурирано на V7.5 стратегија со open price execution |
 
 ---
 
