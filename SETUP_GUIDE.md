@@ -130,13 +130,17 @@ Your Pine Script sends this JSON:
 - Dry-run simulation
 - Webhook server framework
 - Binance API read-only client
+- **Vibe-Trading Integration** - 64 AI finance skills
+- **Complete backup/restore system** for VPS migration
+- **Real-time dashboard** at http://5.9.248.66:8080
+- **Systemd services** for auto-restart
 
 ❌ **Not Yet Implemented:**
 - Live order execution (orders to Binance)
 - WebSocket price feeds
 - Risk management (daily limits, drawdown)
-- Position monitoring/tracking
 - Database persistence
+- Telegram notifications
 
 ## Testing
 
@@ -156,6 +160,47 @@ curl -X POST http://localhost:8000/webhook \
 2. **Add live trading** - Implement actual order submission
 3. **Add monitoring** - Track PnL, positions, errors
 4. **Add risk controls** - Daily loss limits, max positions
+5. **Vibe-Trading Analysis** - Use AI skills to improve V7.5 strategy
+6. **Telegram notifications** - Alerts for trades
+
+## Vibe-Trading Integration (NEW!)
+
+### Installation
+```bash
+# Already installed in venv
+source venv/bin/activate
+
+# List all 64 skills
+vibe-trading --skills
+
+# Use MCP wrapper for OpenClaw
+./vibe-trading-mcp-wrapper.sh
+```
+
+### Useful Skills for Your Strategy
+- `technical-basic` - Core indicators (EMA/ADX/RSI/BB/OBV)
+- `candlestick` - 15 candlestick patterns
+- `backtest-diagnose` - Strategy diagnostics
+- `pattern_recognition` - Chart patterns
+- `risk-analysis` - VaR/CVaR, Monte Carlo
+- `smc` - Smart Money Concepts (ICT)
+- `elliott-wave` - Elliott Wave Theory
+- `ichimoku` - Ichimoku Kinko Hyo
+
+### Backup & Restore
+```bash
+# Create complete backup
+./backup_openclaw.sh
+
+# Backup is saved to:
+# ~/openclaw_backups/openclaw_backup_YYYYMMDD_HHMMSS.tar.gz
+
+# To restore on new VPS:
+# 1. Copy backup to new server
+# 2. tar -xzf openclaw_backup_*.tar.gz
+# 3. cd openclaw_backup_*/
+# 4. ./restore.sh
+```
 
 ## Security Notes
 

@@ -72,6 +72,28 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - Читање на цени, баланс, позиции
 - Подготвен за live trading (сега disabled)
 
+### 6. **Vibe-Trading Integration** (NEW! 🎉)
+- **AI-powered finance toolkit** со 64 specialized skills
+- **Backtest engines** со statistical validation (Monte Carlo, Bootstrap, Walk-Forward)
+- **Technical analysis skills**: candlestick, Elliott wave, Ichimoku, SMC, harmonic patterns
+- **Risk analysis**: VaR/CVaR, stress testing, tail risk
+- **MCP server** за интеграција со OpenClaw
+- **Wrapper script**: `vibe-trading-mcp-wrapper.sh`
+
+**Инсталација:**
+```bash
+# Веќе инсталирано во venv
+source venv/bin/activate
+vibe-trading --skills  # Листај ги сите 64 skills
+```
+
+**Корисни skills за твојата стратегија:**
+- `technical-basic` - EMA/ADX/RSI/BB/OBV (споредба со V7.5)
+- `candlestick` - 15 candlestick patterns
+- `backtest-diagnose` - Дијагностицирање на стратегии
+- `pattern_recognition` - Chart patterns (H&S, double top, etc.)
+- `risk-analysis` - VaR/CVaR, Monte Carlo simulation
+
 ---
 
 ## 📁 Структура на проектот
@@ -108,6 +130,11 @@ trading_bot/
 ├── restart_with_price_fix.sh   # Рестарт со цена фикс
 ├── restart_dashboard_v2.sh     # Рестарт v2
 ├── run_tests.sh                # Тест скрипта
+│
+├── Backup & Restore:
+├── backup_openclaw.sh          # Комплетен backup на целиот OpenClaw
+├── push_backup_to_github.sh    # Push backup на GitHub
+├── vibe-trading-mcp-wrapper.sh # Vibe-Trading MCP wrapper
 │
 └── venv/                       # Python виртуелна средина
     └── (venv/ е исклучен од git)
@@ -223,6 +250,8 @@ python3 test_webhook_integration.py
 | 2026-04-10 | Ажурирано на V7.5 стратегија со open price execution |
 | 2026-04-10 | Поправена индентација во Pine Script (if блокови) |
 | 2026-04-10 | Комплетен backup/restore систем креиран |
+| 2026-04-10 | **Vibe-Trading интеграција** - 64 finance skills инсталирани |
+| 2026-04-10 | Анализа на `technical-basic` skill (споредба со V7.5) |
 
 ---
 
