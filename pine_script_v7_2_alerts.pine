@@ -1,0 +1,203 @@
+//@version=5
+strategy("BTCUSDT 5m V7.2 Next-Bar Execution Strategy",
+ overlay=true,
+ initial_capital=10000,
+ default_qty_type=strategy.percent_of_equity,
+ default_qty_value=30,
+ commission_type=strategy.commission.percent,
+ commission_value=0.05,
+ slippage=2,
+ pyramiding=0,
+ calc_on_order_fills=true,
+ calc_on_every_tick=false,
+ process_orders_on_close=true)
+
+// ======================================================
+// INPUTS
+// ======================================================
+
+emaFastLen = input.int(21)
+emaSlowLen = input.int(55)
+trendEmaLen = input.int(200)
+pullbackEmaLen = input.int(20)
+
+rsiLen = input.int(14)
+rsiBull = input.float(54)
+rsiBear = input.float(46)
+
+adxLen = input.int(14)
+adxMin = input.float(17.0)
+
+atrLen = input.int(14)
+minAtrPct = input.float(0.18)
+maxAtrPct = input.float(2.50)
+
+longBodyStrengthMin = input.float(0.56)
+shortBodyStrengthMin = input.float(0.50)
+
+longLookbackBreakout = input.int(3)
+shortLookbackBreakout = input.int(2)
+
+maxDistanceFromPullbackEmaPct = input.float(1.10)
+
+// ======================================================
+// INDICATORS
+// ======================================================
+
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+trendEma = ta.ema(close, trendEmaLen)
+pullbackEma = ta.ema(close, pullbackEmaLen)
+
+rsi = ta.rsi(close, rsiLen)
+atr = ta.atr(atrLen)
+atrPct = (atr / close) * 100
+
+rangeBar = high - low
+bodySize = math.abs(close - open)
+bodyRatio = rangeBar > 0 ? bodySize / rangeBar : 0.0
+
+distanceFromPullbackEmaPct = math.abs(close - pullbackEma) / pullbackEma * 100
+
+// ======================================================
+// ADX
+// ======================================================
+
+upMove = high - high[1]
+downMove = low[1] - low
+
+plusDM = (upMove > downMove and upMove > 0) ? upMove : 0
+minusDM = (downMove > upMove and downMove > 0) ? downMove : 0
+
+trur = ta.rma(ta.tr, adxLen)
+plusDI = 100 * ta.rma(plusDM, adxLen) / trur
+minusDI = 100 * ta.rma(minusDM, adxLen) / trur
+dx = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+adx = ta.rma(dx, adxLen)
+
+// ======================================================
+// REGIME FILTERS
+// ======================================================
+
+volatilityOkay = atrPct >= minAtrPct and atrPct <= maxAtrPct
+trendQualityOkay = adx >= adxMin
+distanceOkay = distanceFromPullbackEmaPct <= maxDistanceFromPullbackEmaPct
+
+emaSeparationPct = math.abs(emaFast - emaSlow) / close * 100
+emaSeparationOkay = emaSeparationPct >= 0.08
+
+marketOkay = volatilityOkay and trendQualityOkay and distanceOkay and emaSeparationOkay
+
+// ======================================================
+// BIAS
+// ======================================================
+
+bullBias =
+ emaFast > emaSlow and
+ close > trendEma and
+ rsi > rsiBull and
+ marketOkay
+
+bearBias =
+ emaFast < emaSlow and
+ close < trendEma and
+ rsi < rsiBear and
+ marketOkay
+
+// ======================================================
+// TRIGGERS (SIGNAL GENERATION)
+// ======================================================
+
+recentPullbackLong = ta.lowest(low, 4) <= pullbackEma
+recentPullbackShort = ta.highest(high, 4) >= pullbackEma
+
+bullReclaim =
+ close > pullbackEma and
+ close > open and
+ bodyRatio >= longBodyStrengthMin and
+ close > high[1] and
+ close > emaFast
+
+bullBreakout = close > ta.highest(high[1], longLookbackBreakout)
+
+bearBreakdown =
+ close < pullbackEma and
+ close < open and
+ bodyRatio >= shortBodyStrengthMin and
+ close < low[1]
+
+bearBreakout = close < ta.lowest(low[1], shortLookbackBreakout)
+
+// FINAL SIGNALS (ON CURRENT BAR CLOSE)
+longSignal =
+ bullBias and
+ recentPullbackLong and
+ bullReclaim and
+ bullBreakout
+
+shortSignal =
+ bearBias and
+ recentPullbackShort and
+ bearBreakdown and
+ bearBreakout
+
+// ======================================================
+// NEXT BAR EXECUTION
+// ======================================================
+
+// Store previous signals
+longSignal_prev = longSignal[1]
+shortSignal_prev = shortSignal[1]
+
+// Previous position state
+prevPos = strategy.position_size[1]
+wasLong = prevPos > 0
+wasShort = prevPos < 0
+
+// Execute based on PREVIOUS BAR signal
+buyExec = longSignal_prev and not wasLong
+sellExec = shortSignal_prev and not wasShort
+
+// ======================================================
+// EXECUTION
+// ======================================================
+
+if buyExec
+ strategy.entry("Long", strategy.long, comment="BUY")
+
+if sellExec
+ strategy.entry("Short", strategy.short, comment="SELL")
+
+// ======================================================
+// VISUALS
+// ======================================================
+
+inLong = strategy.position_size > 0
+inShort = strategy.position_size < 0
+
+plot(emaFast, "EMA Fast", color=color.orange)
+plot(emaSlow, "EMA Slow", color=color.blue)
+plot(trendEma, "Trend EMA", color=color.purple)
+plot(pullbackEma, "Pullback EMA", color=color.yellow)
+
+bgcolor(inLong ? color.new(color.green, 88) : inShort ? color.new(color.red, 88) : na)
+
+plotshape(buyExec, location=location.belowbar, color=color.lime, style=shape.labelup, text="BUY")
+plotshape(sellExec, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// ======================================================
+// WEBHOOK ALERTS - ENHANCED WITH FULL CONTEXT
+// ======================================================
+
+// Build alert message with all necessary info
+alertMsgLong = '{"action":"buy","symbol":"' + syminfo.ticker + '","side":"long","price":' + str.tostring(close) + ',"strategy":"ema_cross_v7_2","timeframe":"5m","timestamp":' + str.tostring(time) + ',"indicators":{"rsi":' + str.tostring(rsi) + ',"adx":' + str.tostring(adx) + ',"atr_pct":' + str.tostring(atrPct) + '}}'
+
+alertMsgShort = '{"action":"sell","symbol":"' + syminfo.ticker + '","side":"short","price":' + str.tostring(close) + ',"strategy":"ema_cross_v7_2","timeframe":"5m","timestamp":' + str.tostring(time) + ',"indicators":{"rsi":' + str.tostring(rsi) + ',"adx":' + str.tostring(adx) + ',"atr_pct":' + str.tostring(atrPct) + '}}'
+
+// Alert conditions for webhook
+alertcondition(longSignal, title="🟢 BUY Signal", message=alertMsgLong)
+alertcondition(shortSignal, title="🔴 SELL Signal", message=alertMsgShort)
+
+// Optional: Alert on execution (for logging)
+alertcondition(buyExec, title="✅ BUY Executed", message='{"action":"buy_executed","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}')
+alertcondition(sellExec, title="✅ SELL Executed", message='{"action":"sell_executed","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}')
