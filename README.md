@@ -52,7 +52,9 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - Симулира тргување без реални пари
 - Прати позиции: FLAT → LONG / SHORT
 - Пресметува P&L (profit/loss)
-- Заштита од дупликат сигнали
+- **Заштита од дупликат сигнали (30s window)**
+- **Персистентна состојба** (survives restarts)
+- **Правилно flip-ување** на позиции (LONG→SHORT, SHORT→LONG)
 
 **Параметри:**
 - Баланс: $1000 (paper)
@@ -61,11 +63,18 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - Симбол: BTCUSDT
 
 ### 4. **Dashboard** (`trading_bot_server.py`)
-- Real-time веб интерфејс на порт 8080
+- Real-time веб интерфејс на порт 6000
 - Покажува тековна позиција, P&L, историја
 - Auto-refresh секои 5 секунди
+- **State persistence** - состојба се чува во `bot_state.json`
+- **Alert deduplication** - спречува двојна обработка
 
-**URL:** http://5.9.248.66:8080
+**URL:** http://5.9.248.66:6000
+
+**API Endpoints:**
+- `GET /api/status` - Full bot status
+- `GET /api/trades` - Trade history
+- `GET /api/reset?side=SHORT&size=0.006&entry=72000` - Manual reset
 
 ### 5. **Binance API Client** (`binance_api_client.py`)
 - Интеграција со Binance Futures API
@@ -165,9 +174,14 @@ trading_bot/
 
 ### Позициска заштита:
 - Веќе LONG + BUY сигнал = **игнорира** (веке сме купени)
-- Веќе LONG + SELL сигнал = **затвора LONG**, отвора **SHORT**
+- Веќе LONG + SELL сигнал = **FLIP**: затвора LONG → отвора SHORT ✓
 - Веќе SHORT + SELL сигнал = **игнорира**
-- Веќе SHORT + BUY сигнал = **затвора SHORT**, отвора **LONG**
+- Веќе SHORT + BUY сигнал = **FLIP**: затвора SHORT → отвора LONG ✓
+
+### Deduplication (Ново!):
+- Ист alert во рок од **30 секунди** = **игнорира**
+- Спречува двојна обработка кога TradingView праќа дупликати
+- Hash базиран на `action:symbol:price`
 
 ---
 
@@ -212,7 +226,7 @@ tail -f /tmp/webhook_server.log
 
 ## 📊 Dashboard
 
-**URL:** http://5.9.248.66:8080
+**URL:** http://5.9.248.66:6000
 
 Покажува:
 - 🎯 Тековна позиција (LONG/SHORT/FLAT)
@@ -220,6 +234,8 @@ tail -f /tmp/webhook_server.log
 - 📈 Количина и entry цена
 - 🕐 Историја на трговии
 - ⚡ Real-time refresh
+- 🛡️ Deduplication статус
+- 💾 State persistence info
 
 ---
 
@@ -252,20 +268,26 @@ python3 test_webhook_integration.py
 | 2026-04-10 | Комплетен backup/restore систем креиран |
 | 2026-04-10 | **Vibe-Trading интеграција** - 64 finance skills инсталирани |
 | 2026-04-10 | Анализа на `technical-basic` skill (споредба со V7.5) |
+| 2026-04-12 | **Фикс за position flip** - правилно LONG→SHORT, SHORT→LONG |
+| 2026-04-12 | **Alert deduplication** - 30s window за спречување дупликати |
+| 2026-04-12 | **State persistence** - позиција се чува во `bot_state.json` |
 
 ---
 
-## 📊 Тековен Статус (2026-04-10)
+## 📊 Тековен Статус (2026-04-12)
 
 | Параметар | Вредност |
 |-----------|----------|
 | **Стратегија** | V7.5 Webhook (работи) |
-| **Позиција** | 🟢 LONG |
+| **Позиција** | 🔴 SHORT |
+| **Entry Price** | ~$72,234 |
 | **Симбол** | BTCUSDT |
 | **Timeframe** | 5m |
 | **Алерти** | ✅ Наместени и активни |
-| **Последен сигнал** | BUY |
+| **Последен сигнал** | SELL (флип од LONG→SHORT) |
 | **Мод** | Paper Trading (dry-run) |
+| **Deduplication** | ✅ 30s window |
+| **State Persistence** | ✅ `bot_state.json` |
 
 ## 🎯 Следни чекори
 
@@ -286,6 +308,7 @@ python3 test_webhook_integration.py
 
 ## 📞 Линкови
 
-- **Dashboard:** http://5.9.248.66:8080
+- **Dashboard:** http://5.9.248.66:6000
+- **API Status:** http://5.9.248.66:6000/api/status
 - **Webhook:** http://5.9.248.66/webhook
 - **GitHub:** https://github.com/damjanm1983-star/DamJanBot
