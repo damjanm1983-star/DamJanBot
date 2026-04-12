@@ -760,7 +760,7 @@ def run_webhook_server(port=8000):
 def run_dashboard_server(port=6000):
     """Run dashboard server in main thread"""
     server = HTTPServer(('0.0.0.0', port), DashboardHandler)
-    logger.info(f"📊 Dashboard on http://5.9.248.66:{port}")
+    logger.info(f"📊 Dashboard on http://5.9.248.66:{port} (proxied via nginx on 8080)")
     server.serve_forever()
 
 
@@ -775,8 +775,8 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info("Mode: DRY-RUN (no real trades)")
     logger.info("Webhook: http://5.9.248.66/webhook")
-    logger.info("Dashboard: http://5.9.248.66:6000")
-    logger.info("API Status: http://5.9.248.66:6000/api/status")
+    logger.info("Dashboard: http://5.9.248.66:8080 (→ proxied to port 6000)")
+    logger.info("API Status: http://5.9.248.66:8080/api/status")
     logger.info("=" * 60)
     
     # Start webhook server in thread

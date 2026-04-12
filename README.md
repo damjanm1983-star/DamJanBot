@@ -63,13 +63,13 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - Симбол: BTCUSDT
 
 ### 4. **Dashboard** (`trading_bot_server.py`)
-- Real-time веб интерфејс на порт 6000
+- Real-time веб интерфејс (nginx проксира 8080 → 6000)
 - Покажува тековна позиција, P&L, историја
 - Auto-refresh секои 5 секунди
 - **State persistence** - состојба се чува во `bot_state.json`
 - **Alert deduplication** - спречува двојна обработка
 
-**URL:** http://5.9.248.66:6000
+**URL:** http://5.9.248.66:8080
 
 **API Endpoints:**
 - `GET /api/status` - Full bot status
@@ -226,7 +226,7 @@ tail -f /tmp/webhook_server.log
 
 ## 📊 Dashboard
 
-**URL:** http://5.9.248.66:6000
+**URL:** http://5.9.248.66:8080 (nginx → port 6000)
 
 Покажува:
 - 🎯 Тековна позиција (LONG/SHORT/FLAT)
@@ -308,7 +308,7 @@ python3 test_webhook_integration.py
 
 ## 📞 Линкови
 
-- **Dashboard:** http://5.9.248.66:6000
-- **API Status:** http://5.9.248.66:6000/api/status
+- **Dashboard:** http://5.9.248.66:8080 (→ port 6000)
+- **API Status:** http://5.9.248.66:8080/api/status
 - **Webhook:** http://5.9.248.66/webhook
 - **GitHub:** https://github.com/damjanm1983-star/DamJanBot
