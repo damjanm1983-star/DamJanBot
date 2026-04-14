@@ -30,15 +30,20 @@
 
 ## 🔧 Компоненти
 
-### 1. **TradingView Pine Script** (`BTCUSDT_V7_5_webhook.pine`)
-- Стратегија за BTCUSDT на 5m timeframe
-- Генерира BUY/SELL сигнали базирани на техничка анализа
-- Испраќа webhook alerts во реално време
-- Користи `open` цена за следната свеќа (next bar execution)
+### 1. **TradingView Pine Script** (`BTCUSDT_Clean_Single_Alert.pine`) ✅ НОВО
+- **Unified single alert** стратегија - еден alert за buy/sell
+- Користи `{{strategy.order.action}}` за автоматско buy/sell
+- Нема duplicate alerts
+- Правилно next bar execution
 
-```pinescript
-alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}', alert.freq_once_per_bar)
+**Alert Message:**
+```json
+{"action":"{{strategy.order.action}}","symbol":"{{ticker}}","price":{{close}}}
 ```
+
+**Стара стратегија** (`BTCUSDT_V7_5_webhook.pine`):
+- Генерираше duplicate alerts (buy + sell одделно)
+- Потребни беа 2 одделни alerts во TradingView
 
 ### 2. **Webhook Handler** (`webhook_handler.py`)
 - Flask сервер на порт 8000
@@ -68,6 +73,7 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - Auto-refresh секои 5 секунди
 - **State persistence** - состојба се чува во `bot_state.json`
 - **Alert deduplication** - спречува двојна обработка
+- **Enhanced logging** - детални webhook логови
 
 **URL:** http://5.9.248.66:8080
 
@@ -75,6 +81,12 @@ alert('{"action":"buy","symbol":"' + syminfo.ticker + '","price":' + str.tostrin
 - `GET /api/status` - Full bot status
 - `GET /api/trades` - Trade history
 - `GET /api/reset?side=SHORT&size=0.006&entry=72000` - Manual reset
+
+**Manual Trigger (кога webhook не работи):**
+```bash
+./trigger_alert.sh buy    # Мануелен buy
+./trigger_alert.sh sell   # Мануелен sell
+```
 
 ### 5. **Binance API Client** (`binance_api_client.py`)
 - Интеграција со Binance Futures API
@@ -111,8 +123,11 @@ vibe-trading --skills  # Листај ги сите 64 skills
 trading_bot/
 ├── README.md                    # Овој фајл
 ├── SETUP_GUIDE.md              # Детален setup guide
+├── ALERT_SETUP_GUIDE.md        # TradingView alert конфигурација
+├── BOT_SYNC_FIX.md             # Troubleshooting за sync проблеми
+├── SYNC_STATUS.md              # Тековен статус
 ├── config.py                   # Конфигурација
-├── trading_bot_server.py       # Dashboard сервер
+├── trading_bot_server.py       # Dashboard сервер (со enhanced logging)
 ├── webhook_handler.py          # Webhook примач
 ├── dry_run_engine.py           # Симулациски engine
 ├── binance_api_client.py       # Binance API wrapper
@@ -121,6 +136,8 @@ trading_bot/
 ├── test_webhook_integration.py # Тестови
 │
 ├── Pine Script стратегии:
+├── BTCUSDT_Clean_Single_Alert.pine  # ✅ НОВО: Unified single alert стратегија
+├── BTCUSDT_Unified_Alerts.pine      # Unified alerts (backup)
 ├── BTCUSDT_V7_5_webhook.pine   # Главна стратегија (V7.5)
 ├── BTCUSDT_V7_4_webhook.pine   # Стара верзија (V7.4)
 ├── BTCUSDT_V7_4_Final.pine     # Финална верзија
@@ -139,11 +156,17 @@ trading_bot/
 ├── restart_with_price_fix.sh   # Рестарт со цена фикс
 ├── restart_dashboard_v2.sh     # Рестарт v2
 ├── run_tests.sh                # Тест скрипта
+├── start_bot.sh                # ✅ НОВО: Едноставен старт скрипта
+├── trigger_alert.sh            # ✅ НОВО: Мануелен alert trigger (fallback)
 │
 ├── Backup & Restore:
 ├── backup_openclaw.sh          # Комплетен backup на целиот OpenClaw
 ├── push_backup_to_github.sh    # Push backup на GitHub
 ├── vibe-trading-mcp-wrapper.sh # Vibe-Trading MCP wrapper
+│
+├── Monitoring & Logs:
+├── alert_log.jsonl             # Историја на сите alerts
+├── bot_state.json              # Перзистентна состојба
 │
 └── venv/                       # Python виртуелна средина
     └── (venv/ е исклучен од git)
@@ -271,23 +294,34 @@ python3 test_webhook_integration.py
 | 2026-04-12 | **Фикс за position flip** - правилно LONG→SHORT, SHORT→LONG |
 | 2026-04-12 | **Alert deduplication** - 30s window за спречување дупликати |
 | 2026-04-12 | **State persistence** - позиција се чува во `bot_state.json` |
+| 2026-04-14 | **Unified single alert** - `BTCUSDT_Clean_Single_Alert.pine` |
+| 2026-04-14 | **Enhanced webhook logging** - детални логови за секој request |
+| 2026-04-14 | **Manual trigger script** - `trigger_alert.sh` за fallback |
+| 2026-04-14 | **Alert troubleshooting docs** - `ALERT_SETUP_GUIDE.md` |
 
 ---
 
-## 📊 Тековен Статус (2026-04-12)
+## 📊 Тековен Статус (2026-04-14)
 
 | Параметар | Вредност |
 |-----------|----------|
-| **Стратегија** | V7.5 Webhook (работи) |
-| **Позиција** | 🔴 SHORT |
-| **Entry Price** | ~$72,234 |
+| **Стратегија** | ✅ Clean Single Alert (unified) |
+| **Позиција** | 🟢 LONG |
+| **Entry Price** | ~$74,287 |
 | **Симбол** | BTCUSDT |
 | **Timeframe** | 5m |
-| **Алерти** | ✅ Наместени и активни |
-| **Последен сигнал** | SELL (флип од LONG→SHORT) |
+| **Алерти** | ✅ Unified single alert |
+| **Последен сигнал** | BUY (флип од SHORT→LONG) |
 | **Мод** | Paper Trading (dry-run) |
 | **Deduplication** | ✅ 30s window |
 | **State Persistence** | ✅ `bot_state.json` |
+| **Webhook Logging** | ✅ Enhanced logging активно |
+| **Manual Fallback** | ✅ `trigger_alert.sh` достапен |
+
+### 🔧 Поправки од 2026-04-14
+- **Duplicate alerts**: Поправено со unified single alert стратегија
+- **Webhook issues**: Додаден enhanced logging и manual fallback
+- **Email duplicates**: Решено (uncheck "Send plain text" во TradingView)
 
 ## 🎯 Следни чекори
 

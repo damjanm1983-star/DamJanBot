@@ -35,6 +35,7 @@ logger = logging.getLogger("TradingBot")
 
 # Constants
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_state.json')
+ALERT_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'alert_log.jsonl')
 ALERT_DEDUP_WINDOW_SECONDS = 30  # Ignore duplicate alerts within 30 seconds
 
 
@@ -129,6 +130,21 @@ class TradingBot:
                 json.dump(self.position_state.to_dict(), f, indent=2)
         except Exception as e:
             logger.error(f"❌ Could not save state: {e}")
+    
+    def _log_alert(self, alert_data: Dict[str, Any], result: Dict[str, Any], raw_body: str):
+        """Log every alert received for debugging"""
+        try:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "raw_body": raw_body[:500],
+                "parsed_alert": alert_data,
+                "result": result,
+                "position_before": self.position_state.side
+            }
+            with open(ALERT_LOG_FILE, 'a') as f:
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            logger.warning(f"Could not log alert: {e}")
     
     def _sync_engine_with_state(self):
         """Sync the dry-run engine with our persisted state"""
@@ -259,6 +275,9 @@ class TradingBot:
         # Save state after processing
         self._save_state()
         
+        # Log the alert for debugging
+        self._log_alert(alert_data, result, str(alert_data))
+        
         logger.info("=" * 60)
         return result
     
@@ -361,6 +380,9 @@ class TradingBot:
         current_price = Decimal("71500")  # Placeholder - would fetch from API
         unrealized_pnl = self._calculate_unrealized_pnl(current_price)
         
+        # Check for recent alert log entries
+        recent_alerts = self._get_recent_alert_log()
+        
         return {
             "bot": {
                 "alerts_received": len(self.recent_alerts),
@@ -374,7 +396,8 @@ class TradingBot:
                 } if self.position_state.last_trade_time else None,
                 "start_time": self.position_state.to_dict().get('start_time', datetime.now().isoformat()),
                 "status": "running",
-                "dedup_window_seconds": ALERT_DEDUP_WINDOW_SECONDS
+                "dedup_window_seconds": ALERT_DEDUP_WINDOW_SECONDS,
+                "recent_webhook_logs": recent_alerts
             },
             "position": {
                 "symbol": self.position_state.symbol,
@@ -390,6 +413,24 @@ class TradingBot:
                 "unrealized_pnl": f"${float(unrealized_pnl):,.2f}"
             }
         }
+    
+    def _get_recent_alert_log(self, limit: int = 5) -> list:
+        """Get recent entries from alert log"""
+        try:
+            if not os.path.exists(ALERT_LOG_FILE):
+                return []
+            with open(ALERT_LOG_FILE, 'r') as f:
+                lines = f.readlines()
+            # Return last N entries
+            recent = []
+            for line in lines[-limit:]:
+                try:
+                    recent.append(json.loads(line.strip()))
+                except:
+                    pass
+            return recent
+        except Exception as e:
+            return [{"error": str(e)}]
     
     def reset_position(self, side: str = "FLAT", size: str = "0", entry_price: Optional[str] = None):
         """Manually reset position state (for fixing corrupted state)"""
@@ -429,9 +470,15 @@ class WebhookHandler(BaseHTTPRequestHandler):
         if self.path == '/webhook':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
+            raw_body = post_data.decode('utf-8')
+            
+            # Log EVERY webhook request for debugging
+            client_ip = self.client_address[0]
+            logger.info(f"🔔 WEBHOOK RECEIVED from {client_ip}")
+            logger.info(f"📄 Raw body: {raw_body[:500]}")  # Log first 500 chars
             
             try:
-                alert_data = json.loads(post_data.decode('utf-8'))
+                alert_data = json.loads(raw_body)
                 result = bot.process_alert(alert_data)
                 
                 self.send_response(200)
@@ -439,8 +486,14 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps(result, indent=2).encode())
                 
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ JSON parse error: {e}")
+                logger.error(f"❌ Raw data received: {raw_body[:500]}")
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Invalid JSON", "raw": raw_body[:200]}).encode())
             except Exception as e:
-                logger.error(f"Error processing alert: {e}")
+                logger.error(f"❌ Error processing alert: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode())
@@ -460,6 +513,15 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(status, indent=2).encode())
+        elif self.path == '/webhook':
+            # Allow GET to webhook for testing
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "webhook_ready",
+                "message": "Send POST requests to this URL with JSON: {\"action\":\"buy|sell\",\"symbol\":\"BTCUSDT\",\"price\":12345}"
+            }, indent=2).encode())
         else:
             self.send_response(404)
             self.end_headers()
