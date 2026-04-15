@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config
 from dry_run_engine import DryRunEngine, OrderSide, OrderType
+from telegram_notifier import TelegramNotifier
 
 # Setup logging
 logging.basicConfig(
@@ -91,6 +92,12 @@ class TradingBot:
         self.config = Config()
         self.engine = DryRunEngine(self.config)
         
+        # Initialize Telegram notifier
+        self.telegram = TelegramNotifier(
+            bot_token=self.config.telegram_bot_token,
+            chat_id=self.config.telegram_chat_id
+        )
+        
         # Load persisted state
         self.position_state = self._load_state()
         
@@ -108,6 +115,10 @@ class TradingBot:
         logger.info(f"🔄 Current position: {self.position_state.side} {self.position_state.size} BTC")
         if self.position_state.entry_price:
             logger.info(f"💰 Entry price: ${self.position_state.entry_price:,.2f}")
+        if self.telegram.enabled:
+            logger.info("📱 Telegram notifications: ENABLED")
+        else:
+            logger.info("📱 Telegram notifications: DISABLED")
         logger.info("=" * 60)
     
     def _load_state(self) -> PositionState:
@@ -302,6 +313,15 @@ class TradingBot:
             self.position_state.last_trade_time = datetime.now().isoformat()
             
             logger.info(f"✅ OPENED {side} position: {quantity:.6f} BTC @ ${price:,.2f}")
+            
+            # Send Telegram notification
+            if self.telegram.enabled:
+                self.telegram.notify_position_open(
+                    side=side,
+                    symbol=symbol,
+                    price=float(price),
+                    size=float(quantity)
+                )
         
         return result
     
@@ -357,6 +377,18 @@ class TradingBot:
             
             logger.info(f"✅ OPENED {new_side} position: {new_quantity:.6f} BTC @ ${price:,.2f}")
             logger.info(f"🎯 Position flip complete: {current_side} → {new_side}")
+            
+            # Send Telegram notification
+            if self.telegram.enabled:
+                self.telegram.notify_trade(
+                    action=action,
+                    symbol=symbol,
+                    price=float(price),
+                    size=float(new_quantity),
+                    realized_pnl=float(realized_pnl),
+                    from_side=current_side,
+                    to_side=new_side
+                )
         else:
             # If open failed, we're flat
             self.position_state.side = "FLAT"
@@ -680,6 +712,105 @@ class DashboardHandler(BaseHTTPRequestHandler):
             border-radius: 8px;
             margin-bottom: 20px;
         }}
+        /* P&L Visual Styles */
+        .pnl-card {{
+            position: relative;
+            overflow: hidden;
+        }}
+        .pnl-card.positive {{
+            border-left: 4px solid #00d4aa;
+            background: linear-gradient(135deg, #151b3d 0%, #0d2b1f 100%);
+        }}
+        .pnl-card.negative {{
+            border-left: 4px solid #ff6b6b;
+            background: linear-gradient(135deg, #151b3d 0%, #2b0d0d 100%);
+        }}
+        .pnl-card.neutral {{
+            border-left: 4px solid #8892b0;
+        }}
+        .pnl-amount {{
+            font-size: 42px;
+            font-weight: bold;
+            margin: 15px 0;
+        }}
+        .pnl-amount.positive {{
+            color: #00d4aa;
+        }}
+        .pnl-amount.negative {{
+            color: #ff6b6b;
+        }}
+        .pnl-amount.neutral {{
+            color: #8892b0;
+        }}
+        .pnl-icon {{
+            font-size: 24px;
+            margin-right: 10px;
+        }}
+        .pnl-label {{
+            font-size: 12px;
+            color: #8892b0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        .pnl-sublabel {{
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 8px;
+        }}
+        .summary-bar {{
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }}
+        .summary-item {{
+            background: #1a1f3d;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+        }}
+        .summary-value {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }}
+        .summary-label {{
+            font-size: 11px;
+            color: #8892b0;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }}
+        .trade-history {{
+            margin-top: 15px;
+        }}
+        .trade-item {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #1a1f3d;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }}
+        .trade-side {{
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }}
+        .trade-side.buy {{
+            background: #00d4aa22;
+            color: #00d4aa;
+        }}
+        .trade-side.sell {{
+            background: #ff6b6b22;
+            color: #ff6b6b;
+        }}
+        .trade-pnl {{
+            font-weight: bold;
+            font-size: 16px;
+        }}
     </style>
 </head>
 <body>
@@ -690,61 +821,73 @@ class DashboardHandler(BaseHTTPRequestHandler):
             <span class="badge badge-dryrun">DRY-RUN MODE</span>
         </h1>
         
-        <div class="detail" style="margin-bottom: 20px;">
-            <strong>Deduplication:</strong> {status['bot']['dedup_window_seconds']}s window | 
-            <strong>Alerts tracked:</strong> {status['bot']['alerts_received']} | 
-            <strong>Trades:</strong> {status['bot']['trades_executed']}
+        <!-- Summary Bar -->
+        <div class="summary-bar">
+            <div class="summary-item">
+                <div class="summary-value {side_class}">{side}</div>
+                <div class="summary-label">Position</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-value">{pos_size:.4f}</div>
+                <div class="summary-label">BTC Size</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-value">${entry_price:,.0f}</div>
+                <div class="summary-label">Entry Price</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-value">{status['performance']['total_trades']}</div>
+                <div class="summary-label">Trades</div>
+            </div>
         </div>
         
+        <!-- P&L Grid -->
         <div class="grid">
-            <div class="card">
-                <h2>Current Position</h2>
-                <div class="metric {side_class}">
-                    {side}
+            <!-- Unrealized PnL Card -->
+            <div class="card pnl-card {'positive' if unrealized_pnl > 0 else 'negative' if unrealized_pnl < 0 else 'neutral'}">
+                <div class="pnl-label">
+                    <span class="pnl-icon">{'&#9650;' if unrealized_pnl >= 0 else '&#9660;'}</span>
+                    OPEN POSITION P&L
                 </div>
-                <div class="detail">
-                    <strong>Size:</strong> {pos_size:.6f} BTC<br>
-                    <strong>Entry Price:</strong> <span class="price-large">${entry_price:,.2f}</span><br>
-                    <strong>Position Value:</strong> ${position_value:,.2f}<br>
-                    <strong>Unrealized PnL:</strong> <span class="{'pnl-positive' if unrealized_pnl >= 0 else 'pnl-negative'}">${unrealized_pnl:,.2f}</span><br>
-                    <strong>Realized PnL:</strong> <span class="{'pnl-positive' if realized_pnl >= 0 else 'pnl-negative'}">${realized_pnl:,.2f}</span>
+                <div class="pnl-amount {'positive' if unrealized_pnl > 0 else 'negative' if unrealized_pnl < 0 else 'neutral'}">
+                    {'+' if unrealized_pnl > 0 else ''}${unrealized_pnl:,.2f}
                 </div>
-            </div>
-            
-            <div class="card">
-                <h2>Total Trades</h2>
-                <div class="metric">{status['performance']['total_trades']}</div>
-                <div class="detail">
-                    Last trade: {status['bot']['last_trade']['time'] if status['bot']['last_trade'] else 'None'}<br>
-                    Last alert: {status['bot']['last_alert']['time'] if status['bot']['last_alert'] else 'None'}
+                <div class="pnl-sublabel">
+                    Current trade profit/loss (not realized yet)<br>
+                    <strong>Entry:</strong> ${entry_price:,.2f} | 
+                    <strong>Size:</strong> {pos_size:.6f} BTC
                 </div>
             </div>
             
-            <div class="card">
-                <h2>Realized PnL</h2>
-                <div class="metric {'red' if realized_pnl < 0 else ''}">
-                    ${realized_pnl:,.2f}
+            <!-- Realized PnL Card -->
+            <div class="card pnl-card {'positive' if realized_pnl > 0 else 'negative' if realized_pnl < 0 else 'neutral'}">
+                <div class="pnl-label">
+                    <span class="pnl-icon">&#36;</span>
+                    CLOSED TRADES P&L
                 </div>
-                <div class="detail">
-                    Cumulative realized profit/loss
+                <div class="pnl-amount {'positive' if realized_pnl > 0 else 'negative' if realized_pnl < 0 else 'neutral'}">
+                    {'+' if realized_pnl > 0 else ''}${realized_pnl:,.2f}
                 </div>
-            </div>
-            
-            <div class="card">
-                <h2>Unrealized PnL</h2>
-                <div class="metric {'red' if unrealized_pnl < 0 else 'yellow'}">
-                    ${unrealized_pnl:,.2f}
-                </div>
-                <div class="detail">
-                    Current position open PnL
+                <div class="pnl-sublabel">
+                    Profit/loss from completed trades<br>
+                    <strong>Total Trades:</strong> {status['performance']['total_trades']}
                 </div>
             </div>
         </div>
         
+        <!-- Combined Total -->
+        <div class="card" style="margin-top: 20px; text-align: center; background: {'linear-gradient(135deg, #0d2b1f 0%, #151b3d 100%)' if (realized_pnl + unrealized_pnl) >= 0 else 'linear-gradient(135deg, #2b0d0d 0%, #151b3d 100%)'};">
+            <div class="pnl-label">TOTAL P&L (Realized + Unrealized)</div>
+            <div class="pnl-amount {'positive' if (realized_pnl + unrealized_pnl) >= 0 else 'negative'}" style="font-size: 56px;">
+                {'+' if (realized_pnl + unrealized_pnl) > 0 else ''}${realized_pnl + unrealized_pnl:,.2f}
+            </div>
+        </div>
+        
+        <!-- Trade History -->
         <div class="card" style="margin-top: 20px;">
-            <h2>Last Alert</h2>
-            <div class="detail">
-                {json.dumps(status['bot']['last_alert'], indent=2) if status['bot']['last_alert'] else 'No alerts yet'}
+            <h2>RECENT TRADE HISTORY</h2>
+            <div class="trade-history">
+                {self._render_trade_history()}
             </div>
         </div>
         
@@ -792,6 +935,54 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(json.dumps(trade_list, indent=2).encode())
+    
+    def _render_trade_history(self) -> str:
+        """Render recent trades as HTML"""
+        try:
+            if not os.path.exists(ALERT_LOG_FILE):
+                return '<div class="detail">No trades yet</div>'
+            
+            with open(ALERT_LOG_FILE, 'r') as f:
+                lines = f.readlines()
+            
+            trades = []
+            for line in reversed(lines[-10:]):  # Last 10 entries, newest first
+                try:
+                    entry = json.loads(line.strip())
+                    result = entry.get('result', {})
+                    if 'realized_pnl' in result:
+                        alert = entry.get('parsed_alert', {})
+                        pnl = float(result.get('realized_pnl', 0))
+                        trades.append({
+                            'time': entry.get('timestamp', 'N/A')[:16].replace('T', ' '),
+                            'action': alert.get('action', 'N/A').upper(),
+                            'price': float(alert.get('price', 0)),
+                            'pnl': pnl
+                        })
+                except:
+                    continue
+            
+            if not trades:
+                return '<div class="detail">No completed trades yet</div>'
+            
+            html = ''
+            for t in trades[:5]:  # Show last 5
+                pnl_class = 'positive' if t['pnl'] >= 0 else 'negative'
+                pnl_sign = '+' if t['pnl'] > 0 else ''
+                html += f'''
+                <div class="trade-item">
+                    <div>
+                        <span class="trade-side {'buy' if t['action'] == 'BUY' else 'sell'}">{t['action']}</span>
+                        <span style="color: #8892b0; margin-left: 10px;">@ ${t['price']:,.2f}</span>
+                    </div>
+                    <div class="trade-pnl {pnl_class}">
+                        {pnl_sign}${t['pnl']:,.2f}
+                    </div>
+                </div>
+                '''
+            return html
+        except Exception as e:
+            return f'<div class="detail">Error loading trades: {e}</div>'
     
     def handle_reset(self):
         """Handle manual position reset"""

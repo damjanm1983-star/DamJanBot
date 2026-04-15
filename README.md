@@ -158,6 +158,10 @@ trading_bot/
 ├── run_tests.sh                # Тест скрипта
 ├── start_bot.sh                # ✅ НОВО: Едноставен старт скрипта
 ├── trigger_alert.sh            # ✅ НОВО: Мануелен alert trigger (fallback)
+├── start_with_telegram.sh      # ✅ НОВО: Старт со Telegram notifications
+├── telegram_notifier.py        # ✅ НОВО: Telegram API модул
+├── test_telegram.py            # ✅ НОВО: Тест за Telegram врска
+├── reset_stats_keep_last2.py   # ✅ НОВО: Ресетирање на статистика
 │
 ├── Backup & Restore:
 ├── backup_openclaw.sh          # Комплетен backup на целиот OpenClaw
@@ -298,6 +302,10 @@ python3 test_webhook_integration.py
 | 2026-04-14 | **Enhanced webhook logging** - детални логови за секој request |
 | 2026-04-14 | **Manual trigger script** - `trigger_alert.sh` за fallback |
 | 2026-04-14 | **Alert troubleshooting docs** - `ALERT_SETUP_GUIDE.md` |
+| 2026-04-15 | **Statistics reset** - Reset dashboard stats keeping last 2 trades |
+| 2026-04-15 | **Enhanced dashboard** - Visual P&L cards with color coding |
+| 2026-04-15 | **Telegram notifications** - Real-time trade alerts to Telegram channel |
+| 2026-04-15 | **Telegram bot integration** - `telegram_notifier.py` module |
 
 ---
 
@@ -317,16 +325,53 @@ python3 test_webhook_integration.py
 | **State Persistence** | ✅ `bot_state.json` |
 | **Webhook Logging** | ✅ Enhanced logging активно |
 | **Manual Fallback** | ✅ `trigger_alert.sh` достапен |
+| **Telegram Alerts** | ✅ Real-time notifications |
+| **Dashboard Visual** | ✅ Enhanced P&L display |
 
 ### 🔧 Поправки од 2026-04-14
 - **Duplicate alerts**: Поправено со unified single alert стратегија
 - **Webhook issues**: Додаден enhanced logging и manual fallback
 - **Email duplicates**: Решено (uncheck "Send plain text" во TradingView)
 
+## 📱 Telegram Notifications (NEW! 2026-04-15)
+
+Real-time trade alerts delivered to your Telegram channel.
+
+### Setup:
+1. Create bot with @BotFather → get **Bot Token**
+2. Create private channel → add bot as admin
+3. Get **Chat ID** from `https://api.telegram.org/bot<TOKEN>/getUpdates`
+4. Set environment variables:
+   ```bash
+   export TELEGRAM_BOT_TOKEN="your_token"
+   export TELEGRAM_CHAT_ID="-100xxxxxxxxx"
+   ```
+
+### Start with Telegram:
+```bash
+./start_with_telegram.sh
+```
+
+### Notification Format:
+```
+🤖 TRADE EXECUTED
+
+Action: sell
+Position: LONG → SHORT
+Symbol: BTCUSDT
+Price: $74,500.00
+Size: 0.006711 BTC
+Realized PnL: 🔴 -$1.62
+
+Time: 2026-04-15 17:10:00 UTC
+```
+
+---
+
 ## 🎯 Следни чекори
 
 - [ ] Чекање на SELL сигнал за тест на position flip
-- [ ] Telegram нотификации за трговии
+- [x] Telegram нотификации за трговии
 - [ ] Подобрена стратегија со повеќе индикатори
 - [ ] Live trading (кога ќе бидеме сигурни)
 

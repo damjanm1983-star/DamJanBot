@@ -1,11 +1,11 @@
 {
   "symbol": "BTCUSDT",
   "side": "LONG",
-  "size": "0.006730652738702599378087686944",
-  "entry_price": "74287",
-  "realized_pnl": "-43.68296660655535124680523577",
-  "trades_count": 8,
-  "last_trade_time": "2026-04-14T06:07:37.998648",
-  "last_alert_hash": "buy:BTCUSDT:74287",
-  "last_alert_time": "2026-04-14T06:07:37.997995"
+  "size": "0.006738544474393530997304582210",
+  "entry_price": "74200",
+  "realized_pnl": "0.523219343407376956747017444",
+  "trades_count": 4,
+  "last_trade_time": "2026-04-15T17:11:41.912534",
+  "last_alert_hash": "buy:BTCUSDT:74200",
+  "last_alert_time": "2026-04-15T17:11:41.911997"
 }

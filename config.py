@@ -32,6 +32,11 @@ class Config:
         # Timezone
         self.time_zone = os.getenv("TIME_ZONE", "UTC")
 
+        # Telegram notifications
+        self.telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        self.telegram_enabled = bool(self.telegram_bot_token and self.telegram_chat_id)
+
         self._validate()
 
         # Warning for live mode
