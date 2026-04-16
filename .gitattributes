@@ -1,0 +1,4 @@
+# Mark certain files as generated/binary
+*.tar.gz binary
+*.tar binary
+*.zip binary

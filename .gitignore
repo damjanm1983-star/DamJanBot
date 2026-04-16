@@ -1,0 +1,21 @@
+# Sensitive files - DO NOT COMMIT
+.env
+*.key
+*.pem
+openclaw.json.bak*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
