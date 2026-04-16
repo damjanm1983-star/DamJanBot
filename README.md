@@ -8,8 +8,9 @@ Complete backup and migration package for moving OpenClaw to a new Hetzner VPS.
 |-------------|-------------|
 | `openclaw_backup_20260416_142026.tar.gz` | Full backup archive (config, workspace, certs, etc.) |
 | `restore.sh` | Automated restore script |
-| `MIGRATION.md` | Step-by-step migration guide |
-| `docker-compose.yml` | Optional Docker setup for quick deployment |
+| `MIGRATION.md` | Complete step-by-step migration guide |
+| `PUSH_TO_GITHUB.md` | GitHub setup and push instructions |
+| `setup-github.sh` | Interactive GitHub setup helper |
 
 ## 🚀 Quick Start
 
@@ -17,7 +18,7 @@ Complete backup and migration package for moving OpenClaw to a new Hetzner VPS.
 
 ```bash
 # Clone this repo
-git clone https://github.com/YOUR_USERNAME/openclaw-migration.git
+git clone git@github.com:YOUR_USERNAME/openclaw-migration.git
 cd openclaw-migration
 
 # Extract and restore
@@ -29,7 +30,7 @@ cd openclaw-migration
 ```bash
 # Edit configs with new VPS IP
 nano ~/.openclaw/openclaw.json
-nano /etc/nginx/sites-available/webhook
+sudo nano /etc/nginx/sites-available/webhook
 ```
 
 ### 3. Start Services
@@ -37,11 +38,13 @@ nano /etc/nginx/sites-available/webhook
 ```bash
 sudo systemctl start openclaw-gateway
 sudo systemctl start nginx
+sudo systemctl start trading-bot
 ```
 
-## 📋 Detailed Guide
+## 📋 Documentation
 
-See [MIGRATION.md](./MIGRATION.md) for complete step-by-step instructions.
+- **[MIGRATION.md](./MIGRATION.md)** - Complete migration guide with all steps
+- **[PUSH_TO_GITHUB.md](./PUSH_TO_GITHUB.md)** - How to push this to your own GitHub
 
 ## 🔒 Security Notes
 
@@ -56,6 +59,36 @@ See [MIGRATION.md](./MIGRATION.md) for complete step-by-step instructions.
 - **Source VPS:** 5.9.248.66
 - **OpenClaw Version:** 2026.4.14
 - **User:** dame
+- **Git Commits:** 3 (initial backup, GitHub helper, push instructions)
+
+## 🗂️ Repository Structure
+
+```
+openclaw-migration/
+├── openclaw_backup_20260416_142026.tar.gz  # 316 MB backup
+├── restore.sh                              # Automated restore
+├── MIGRATION.md                            # Full migration guide
+├── PUSH_TO_GITHUB.md                       # GitHub push guide
+├── setup-github.sh                         # Interactive helper
+├── README.md                               # This file
+├── .gitignore                              # Excludes sensitive files
+└── .gitattributes                          # Binary file handling
+```
+
+## 🔄 Migration Checklist
+
+- [ ] Backup created ✓
+- [ ] Git repository initialized ✓
+- [ ] Push to GitHub ← You are here
+- [ ] Provision new Hetzner VPS
+- [ ] Clone repo on new VPS
+- [ ] Run restore.sh
+- [ ] Update IP addresses
+- [ ] Regenerate TLS certificates
+- [ ] Start services
+- [ ] Update TradingView webhook URL
+- [ ] Test everything
+- [ ] Destroy old VPS
 
 ---
 
