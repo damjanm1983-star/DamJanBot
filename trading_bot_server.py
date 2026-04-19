@@ -598,7 +598,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dame and Jan Trading Bot Dashboard</title>
+    <title>TradingBot Dashboard</title>
     <meta http-equiv="refresh" content="5">
     <style>
         body {{
@@ -817,7 +817,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     <div class="container">
         <h1>
             <span class="status-indicator"></span>
-            Dame and Jan Trading Bot Dashboard
+            TradingBot Dashboard
             <span class="badge badge-dryrun">DRY-RUN MODE</span>
         </h1>
         

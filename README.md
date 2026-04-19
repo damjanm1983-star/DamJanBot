@@ -306,27 +306,30 @@ python3 test_webhook_integration.py
 | 2026-04-15 | **Enhanced dashboard** - Visual P&L cards with color coding |
 | 2026-04-15 | **Telegram notifications** - Real-time trade alerts to Telegram channel |
 | 2026-04-15 | **Telegram bot integration** - `telegram_notifier.py` module |
+| 2026-04-19 | **Telegram fix** - Fixed missing env vars, bot now properly sends alerts |
+| 2026-04-19 | **Dashboard reset** - Statistics reset, position preserved as SHORT |
 
 ---
 
-## 📊 Тековен Статус (2026-04-14)
+## 📊 Тековен Статус (2026-04-19)
 
 | Параметар | Вредност |
 |-----------|----------|
 | **Стратегија** | ✅ Clean Single Alert (unified) |
-| **Позиција** | 🟢 LONG |
-| **Entry Price** | ~$74,287 |
+| **Позиција** | 🔴 SHORT |
+| **Entry Price** | ~$84,000 |
 | **Симбол** | BTCUSDT |
 | **Timeframe** | 5m |
 | **Алерти** | ✅ Unified single alert |
-| **Последен сигнал** | BUY (флип од SHORT→LONG) |
+| **Последен сигнал** | SELL (флип од LONG→SHORT) |
 | **Мод** | Paper Trading (dry-run) |
 | **Deduplication** | ✅ 30s window |
 | **State Persistence** | ✅ `bot_state.json` |
 | **Webhook Logging** | ✅ Enhanced logging активно |
 | **Manual Fallback** | ✅ `trigger_alert.sh` достапен |
-| **Telegram Alerts** | ✅ Real-time notifications |
+| **Telegram Alerts** | ✅ Working (fixed 2026-04-19) |
 | **Dashboard Visual** | ✅ Enhanced P&L display |
+| **Statistics** | ✅ Reset (0 trades, $0 realized PnL) |
 
 ### 🔧 Поправки од 2026-04-14
 - **Duplicate alerts**: Поправено со unified single alert стратегија
