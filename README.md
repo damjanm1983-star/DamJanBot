@@ -60,10 +60,11 @@
 - **Заштита од дупликат сигнали (30s window)**
 - **Персистентна состојба** (survives restarts)
 - **Правилно flip-ување** на позиции (LONG→SHORT, SHORT→LONG)
+- **Динамична големина на позиција** - 50% од ажурираниот баланс (со реализиран PnL)
 
 **Параметри:**
-- Баланс: $1000 (paper)
-- Позиција: 50% од баланс ($500)
+- Баланс: $10,000 (paper) - ажурира се со секој реализиран PnL
+- Позиција: 50% од тековниот баланс
 - Маргина: 30% (~3.3x leverage)
 - Симбол: BTCUSDT
 
@@ -308,6 +309,7 @@ python3 test_webhook_integration.py
 | 2026-04-15 | **Telegram bot integration** - `telegram_notifier.py` module |
 | 2026-04-19 | **Telegram fix** - Fixed missing env vars, bot now properly sends alerts |
 | 2026-04-19 | **Dashboard reset** - Statistics reset, position preserved as SHORT |
+| 2026-04-21 | **Dynamic position sizing** - Position size now uses 50% of updated balance (including realized PnL) |
 
 ---
 
