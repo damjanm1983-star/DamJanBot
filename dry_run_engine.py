@@ -340,6 +340,12 @@ class DryRunEngine:
             commission
         )
         
+        # Update simulated balance with realized PnL from closed trades
+        realized_pnl = position_update.get("realized_pnl", Decimal("0"))
+        if realized_pnl != 0:
+            self.simulated_balance += realized_pnl
+            self.logger.info(f"[DRY-RUN] Balance updated: {self.simulated_balance:.2f} USDT (PnL: {realized_pnl:+.4f})")
+        
         # Ensure entry price is set for new positions
         position = self.positions.get(order.symbol)
         if position and position.size > 0 and not position.entry_price:

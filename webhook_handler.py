@@ -201,9 +201,12 @@ class WebhookHandler:
             return Decimal("0.001")  # 0.001 BTC minimum
     
     def _get_account_balance(self) -> Optional[Dict[str, Any]]:
-        """Fetch USDT balance from Binance"""
+        """Fetch USDT balance from Binance or dry-run engine"""
         if not self.binance_client:
-            # Dry-run mode: return simulated balance
+            # Dry-run mode: return updated simulated balance from engine
+            if self.dry_run_engine:
+                balance = self.dry_run_engine.simulated_balance
+                return {'availableBalance': str(balance)}
             return {'availableBalance': '1000.0'}
         
         try:
