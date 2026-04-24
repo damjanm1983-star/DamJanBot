@@ -1,0 +1,19 @@
+// ======================================================
+// ADD THESE LINES TO THE END OF YOUR WORKING SCRIPT
+// (After your existing plotshape lines)
+// ======================================================
+
+// WEBHOOK ALERTS - Add these at the very end of your script
+
+// Build alert messages with all necessary info for the bot
+alertMsgLong = '{"action":"buy","symbol":"' + syminfo.ticker + '","side":"long","price":' + str.tostring(close) + ',"strategy":"ema_cross_v7_2","timeframe":"5m","timestamp":' + str.tostring(time) + '}'
+
+alertMsgShort = '{"action":"sell","symbol":"' + syminfo.ticker + '","side":"short","price":' + str.tostring(close) + ',"strategy":"ema_cross_v7_2","timeframe":"5m","timestamp":' + str.tostring(time) + '}'
+
+// Alert conditions that can be used in TradingView alerts
+alertcondition(longSignal, title="🟢 BUY Signal", message=alertMsgLong)
+alertcondition(shortSignal, title="🔴 SELL Signal", message=alertMsgShort)
+
+// Optional: Alerts on actual execution
+alertcondition(buyExec, title="✅ BUY Executed", message='{"action":"buy_executed","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}')
+alertcondition(sellExec, title="✅ SELL Executed", message='{"action":"sell_executed","symbol":"' + syminfo.ticker + '","price":' + str.tostring(open) + '}')
