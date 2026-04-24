@@ -1,0 +1,17 @@
+// ======================================================
+// WEBHOOK ALERTS - Pine Script v5 Compatible
+// Add these lines at the VERY END of your working script
+// ======================================================
+
+// For Pine Script v5, alertcondition message must be a const string
+// We use {{ticker}} and {{close}} placeholders which TradingView replaces
+
+// BUY Alert - triggers on longSignal
+alertcondition(longSignal, title="🟢 BUY Signal", message='{"action":"buy","symbol":"{{ticker}}","side":"long","price":{{close}},"timeframe":"5m","strategy":"ema_v7_2"}')
+
+// SELL Alert - triggers on shortSignal  
+alertcondition(shortSignal, title="🔴 SELL Signal", message='{"action":"sell","symbol":"{{ticker}}","side":"short","price":{{close}},"timeframe":"5m","strategy":"ema_v7_2"}')
+
+// Optional: Execution alerts (when order actually fills)
+alertcondition(buyExec, title="✅ BUY Executed", message='{"action":"buy_executed","symbol":"{{ticker}}","price":{{open}}}')
+alertcondition(sellExec, title="✅ SELL Executed", message='{"action":"sell_executed","symbol":"{{ticker}}","price":{{open}}}')

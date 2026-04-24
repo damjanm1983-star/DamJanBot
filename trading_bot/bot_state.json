@@ -1,0 +1,11 @@
+{
+  "symbol": "BTCUSDT",
+  "side": "LONG",
+  "size": "0.006944444444444444444444444444",
+  "entry_price": "72000",
+  "realized_pnl": "85.87102748916758397023700473",
+  "trades_count": 3,
+  "last_trade_time": "2026-04-24T10:31:44.829061",
+  "last_alert_hash": "buy:BTCUSDT:72000",
+  "last_alert_time": "2026-04-24T10:31:44.828391"
+}
