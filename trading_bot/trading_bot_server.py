@@ -202,11 +202,14 @@ class TradingBot:
         return False
     
     def _calculate_position_size(self, price: Decimal) -> Decimal:
-        """Calculate position size based on config"""
-        balance = Decimal("1000.0")
-        allocation = Decimal("0.50")  # 50%
-        position_value = balance * allocation
+        """Calculate position size based on current balance (including realized PnL)"""
+        starting_balance = Decimal("1000.0")
+        # Use realized PnL from both position_state and engine to get current balance
+        current_balance = starting_balance + self.position_state.realized_pnl
+        allocation = Decimal("0.50")  # 50% of current balance
+        position_value = current_balance * allocation
         quantity = position_value / price if price > 0 else Decimal("0.01")
+        logger.info(f"💰 Calculating position size: Balance=${current_balance:.2f} (starting=${starting_balance:.2f} + realized=${self.position_state.realized_pnl:.2f}), 50%=${position_value:.2f}, Price=${price:,.2f} → Size={quantity:.6f} BTC")
         return quantity
     
     def _calculate_unrealized_pnl(self, current_price: Decimal) -> Decimal:
@@ -249,7 +252,7 @@ class TradingBot:
         if self.position_state.entry_price:
             logger.info(f"💵 Entry Price: ${self.position_state.entry_price:,.2f}")
         
-        # Calculate position size for new trades
+        # Calculate position size for new trades (uses updated balance with realized PnL)
         quantity = self._calculate_position_size(price)
         logger.info(f"📊 Trade Size: {quantity:.6f} BTC")
         
@@ -327,7 +330,7 @@ class TradingBot:
     
     def _flip_position(self, symbol: str, current_side: str, action: str, 
                        new_quantity: Decimal, price: Decimal) -> Dict[str, Any]:
-        """Flip position: close current and open opposite"""
+        """Flip position: close current and open opposite with updated balance"""
         
         logger.info(f"🔄 FLIPPING POSITION: {current_side} → {'SHORT' if action == 'sell' else 'LONG'}")
         
@@ -355,6 +358,11 @@ class TradingBot:
         
         self.position_state.realized_pnl += realized_pnl
         logger.info(f"💰 Realized PnL from closing: ${realized_pnl:.4f}")
+        logger.info(f"💰 Updated total realized PnL: ${self.position_state.realized_pnl:.4f}")
+        
+        # Recalculate position size with updated balance (including realized PnL from close)
+        updated_quantity = self._calculate_position_size(price)
+        logger.info(f"📊 Recalculated trade size with updated balance: {updated_quantity:.6f} BTC")
         
         # Step 2: Open new position in opposite direction
         new_side = "SHORT" if action == 'sell' else "LONG"
@@ -364,18 +372,18 @@ class TradingBot:
             symbol=symbol,
             side=open_side,
             order_type=OrderType.MARKET,
-            quantity=new_quantity,
+            quantity=updated_quantity,
             market_price=price
         )
         
         if open_result.get('success'):
             self.position_state.side = new_side
-            self.position_state.size = new_quantity
+            self.position_state.size = updated_quantity
             self.position_state.entry_price = price
             self.position_state.trades_count += 1
             self.position_state.last_trade_time = datetime.now().isoformat()
             
-            logger.info(f"✅ OPENED {new_side} position: {new_quantity:.6f} BTC @ ${price:,.2f}")
+            logger.info(f"✅ OPENED {new_side} position: {updated_quantity:.6f} BTC @ ${price:,.2f}")
             logger.info(f"🎯 Position flip complete: {current_side} → {new_side}")
             
             # Send Telegram notification
@@ -384,7 +392,7 @@ class TradingBot:
                     action=action,
                     symbol=symbol,
                     price=float(price),
-                    size=float(new_quantity),
+                    size=float(updated_quantity),
                     realized_pnl=float(realized_pnl),
                     from_side=current_side,
                     to_side=new_side
@@ -589,6 +597,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         position_value = pos_size * entry_price if pos_size and entry_price else 0
         unrealized_pnl = float(status['position']['unrealized_pnl']) if status['position']['unrealized_pnl'] else 0
         realized_pnl = float(status['position']['realized_pnl']) if status['position']['realized_pnl'] else 0
+        
+        # Calculate simulated balance (starting + realized PnL)
+        starting_balance = 1000.0
+        current_balance = starting_balance + realized_pnl
+        position_size_usd = current_balance * 0.50  # 50% of current balance
         
         # Format side display
         side = status['position']['side']
@@ -839,6 +852,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 <div class="summary-value">{status['performance']['total_trades']}</div>
                 <div class="summary-label">Trades</div>
             </div>
+            <div class="summary-item">
+                <div class="summary-value" style="color: #00d4aa;">${current_balance:,.2f}</div>
+                <div class="summary-label">Sim Balance</div>
+            </div>
         </div>
         
         <!-- P&L Grid -->
@@ -894,8 +911,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         <div class="card" style="margin-top: 20px;">
             <h2>Configuration</h2>
             <div class="detail">
-                <strong>Balance:</strong> $1,000.00<br>
-                <strong>Position Size:</strong> 50% ($500)<br>
+                <strong>Starting Balance:</strong> ${starting_balance:,.2f}<br>
+                <strong>Current Balance:</strong> ${current_balance:,.2f} (includes realized PnL)<br>
+                <strong>Position Size:</strong> 50% of current balance = ${position_size_usd:,.2f}<br>
                 <strong>Margin:</strong> 30%<br>
                 <strong>Effective Leverage:</strong> ~3.3x<br>
                 <strong>Symbol:</strong> BTCUSDT<br>

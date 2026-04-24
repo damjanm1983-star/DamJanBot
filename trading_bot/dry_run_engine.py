@@ -113,7 +113,7 @@ class DryRunEngine:
         self.trade_counter = 0
         
         # Initial balance simulation
-        self.simulated_balance = Decimal("10000.0")  # 10k USDT starting balance
+        self.simulated_balance = Decimal("1000.0")  # 1k USDT starting balance (matches bot config)
         self.margin_used = Decimal("0")
         
         self.logger.info("DryRunEngine initialized")
